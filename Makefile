@@ -9,4 +9,4 @@ all:
 
 win32:
 	cl /Fo"$(BUILDDIR)$(ENV)\\" /I"$(INCLUDE)" /EHsc /c src/win32.cpp
-	LINK /SUBSYSTEM:WINDOWS /OUT:"$(BUILDDIR)$(ENV)\win32.exe" OneCore.Lib "$(BUILDDIR)$(ENV)\win32.obj"
+	LINK /SUBSYSTEM:WINDOWS /OUT:"$(BUILDDIR)$(ENV)\win32.exe" /LIBPATH:"G:\git\MyOpenGL\libs\lib\Release\x64" glew32.lib Opengl32.lib OneCore.lib "$(BUILDDIR)$(ENV)\win32.obj"

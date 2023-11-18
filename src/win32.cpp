@@ -4,12 +4,16 @@
 
 #include <iostream>
 #include <Windows.h>
+#include <GL/glew.h>
+#include <gl/GL.h>
+
+HGLRC hglrc;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-
+    OutputDebugStringW(L"Hello!");
     // Registert the window class.
     const wchar_t CLASS_NAME[] = L"Sample Window Class";
 
@@ -42,11 +46,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     ShowWindow(hwnd, nCmdShow);
 
-    // Run the message loop.
+    HDC hdc = GetDC(hwnd);
 
+    // Run the message loop.
     MSG msg = {};
     while (GetMessage(&msg, NULL, 0, 0))
     {
+        glClear(GL_COLOR_BUFFER_BIT);
+        if (!SwapBuffers(hdc))
+        {
+            OutputDebugStringW(L"SwapBuffers failed");
+        }
+
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
@@ -58,19 +69,82 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
     case WM_PAINT:
     {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hwnd, &ps);
-        FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
+        // PAINTSTRUCT ps;
+        // HDC hdc = BeginPaint(hwnd, &ps);
+        // FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
 
-        EndPaint(hwnd, &ps);
+        // EndPaint(hwnd, &ps);
         return 0;
     }
+    case WM_CREATE:
+    {
+        PIXELFORMATDESCRIPTOR pfd =
+            {
+                sizeof(PIXELFORMATDESCRIPTOR),
+                1,
+                PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER, // Flags
+                PFD_TYPE_RGBA,                                              // The kind of framebuffer. RGBA or palette.
+                32,                                                         // Colordepth of the framebuffer.
+                0, 0, 0, 0, 0, 0,
+                0,
+                0,
+                0,
+                0, 0, 0, 0,
+                24, // Number of bits for the depthbuffer
+                8,  // Number of bits for the stencilbuffer
+                0,  // Number of Aux buffers in the framebuffer.
+                PFD_MAIN_PLANE,
+                0,
+                0, 0, 0};
 
+        HDC hdc = GetDC(hwnd);
+        int iPixelFormat;
+        // get the best available match of pixel format for the device context
+        iPixelFormat = ChoosePixelFormat(hdc, &pfd);
+
+        if (0 == iPixelFormat)
+        {
+            return 0;
+        }
+
+        // make that the pixel format of the device context
+        SetPixelFormat(hdc, iPixelFormat, &pfd);
+
+        // OpenGL Rendering Context
+        // type HGLRC, for handle to GL Rendering Context
+
+        // create a rendering context
+        hglrc = wglCreateContext(hdc);
+
+        // 現在のレンダリングコンテキストとして設定
+        wglMakeCurrent(hdc, hglrc);
+
+        // call OpenGL APIs as desired ...
+
+        GLenum err = glewInit();
+        if (GLEW_OK != err)
+        {
+            // Problem: glewInit failed, something is seriously wrong.
+            // return 1;
+            OutputDebugStringW(L"Error: glewInit failed");
+            return 1;
+        }
+        OutputDebugStringW(L"glewInit success");
+        glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+        return 0;
+    }
+    case WM_DESTROY:
+        // when the rendering context is no longer needed ...
+
+        // make the rendering context not current
+        wglMakeCurrent(NULL, NULL);
+
+        // delete the rendering context
+        wglDeleteContext(hglrc);
+        PostQuitMessage(0);
+        return 0;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
